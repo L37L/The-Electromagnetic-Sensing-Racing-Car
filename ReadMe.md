@@ -1,4 +1,4 @@
-# 智能车控制系统项目 (STC32G12K128)
+# 电磁感知智能车控制系统项目 (STC32G12K128)
 
 [![Language](https://img.shields.io/badge/Language-C251-blue.svg)](https://en.wikipedia.org/wiki/C_(programming_language))
 [![Platform](https://img.shields.io/badge/Platform-STC32G-orange.svg)](http://www.stcmcudata.com/)
