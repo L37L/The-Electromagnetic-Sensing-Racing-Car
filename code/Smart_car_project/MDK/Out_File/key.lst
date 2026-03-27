@@ -1,0 +1,211 @@
+C251 COMPILER V5.60.0,  key                                                                27/03/26  11:12:46  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE key
+OBJECT MODULE PLACED IN .\Out_File\key.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE key.c XSMALL INTR2 UNSIGNED_CHAR FLOAT64 OPTIMIZE(5,SPEED) BROWSE ORDE
+                    -R INCDIR(..\..\Libraries\libraries;..\..\Libraries\seekfree_libraries;..\..\Libraries\seekfree_peripheral;..\CODE;..\USE
+                    -R\inc;..\USER\src) DEBUG PRINT(.\Out_File\key.lst) OBJECT(.\Out_File\key.obj) 
+
+stmt  level    source
+
+    1          #include "key.h"
+    2          
+    3          uint8 key_value1;
+    4          uint8 key_value2;
+    5          uint8 key_value3;
+    6          uint8 key_value4;
+    7          uint8 key_value5;
+    8          uint8 key_value6;
+    9          uint8 key_value7;
+   10          uint8 key_value8;
+   11          
+   12          uint8 key_last_value5;
+   13          uint8 key_last_value6;
+   14          uint8 key_last_value7;
+   15          uint8 key_last_value8;
+   16          
+   17          uint8 sw_state1;                //拨码开关状态变量
+   18          uint8 sw_state2;
+   19          
+   20          Key_Type_e press_temp = Key_None;
+   21          
+   22          void key_init(void)
+   23          {
+   24   1              gpio_mode(KEY_PIN1, GPIO);      gpio_pull_set(KEY_PIN1, PULLUP); KEY_PIN1 = 1; 
+   25   1              gpio_mode(KEY_PIN2, GPIO);      gpio_pull_set(KEY_PIN2, PULLUP); KEY_PIN2 = 1;
+   26   1              gpio_mode(KEY_PIN3, GPIO);      gpio_pull_set(KEY_PIN3, PULLUP); KEY_PIN3 = 1;
+   27   1              gpio_mode(KEY_PIN4, GPIO);      gpio_pull_set(KEY_PIN4, PULLUP); KEY_PIN4 = 1;
+   28   1              gpio_mode(KEY_PIN5, GPIO);      gpio_pull_set(KEY_PIN5, PULLUP); KEY_PIN5 = 1;
+   29   1              gpio_mode(KEY_PIN6, GPIO);      gpio_pull_set(KEY_PIN6, PULLUP); KEY_PIN6 = 1; 
+   30   1              gpio_mode(KEY_PIN7, GPIO);      gpio_pull_set(KEY_PIN7, PULLUP); KEY_PIN7 = 1;
+   31   1              gpio_mode(KEY_PIN8, GPIO);      gpio_pull_set(KEY_PIN8, PULLUP); KEY_PIN8 = 1;
+   32   1              
+   33   1              sw_state1 = SWITCH_1;
+   34   1              sw_state2 = SWITCH_2;
+   35   1      }
+   36          /*
+   37           * 键盘
+   38           * 1  2  3  A
+   39           * 4  5  6  B
+   40           * 7  8  9  C
+   41           * X  0  J  D
+   42           */
+   43          
+   44          Key_Type_e key_scan(void)
+   45          {
+   46   1      
+   47   1              press_temp = Key_None;
+   48   1              
+   49   1              KEY_PIN1 = 0;
+   50   1              KEY_PIN2 = 1;
+   51   1              KEY_PIN3 = 1;
+   52   1              KEY_PIN4 = 1;
+   53   1              key_last_value5 = key_value5;
+   54   1              key_last_value6 = key_value6;
+   55   1              key_last_value7 = key_value7;
+   56   1              key_last_value8 = key_value8;
+   57   1              key_value5 = KEY_PIN5;
+C251 COMPILER V5.60.0,  key                                                                27/03/26  11:12:46  PAGE 2   
+
+   58   1              key_value6 = KEY_PIN6;
+   59   1              key_value7 = KEY_PIN7;
+   60   1              key_value8 = KEY_PIN8;
+   61   1              if(key_value5 && !key_last_value5)
+   62   1              {               
+   63   2                      press_temp = Number1;
+   64   2              }
+   65   1              if(key_value6 && !key_last_value6) 
+   66   1              {
+   67   2                      press_temp = Number2;
+   68   2              }
+   69   1              if(key_value7 && !key_last_value7) 
+   70   1              {
+   71   2                      press_temp = Number3;
+   72   2              }
+   73   1              if(key_value8 && !key_last_value8) 
+   74   1              {
+   75   2                      press_temp = LetterA;
+   76   2              }
+   77   1              
+   78   1              KEY_PIN1 = 1;
+   79   1              KEY_PIN2 = 0;
+   80   1              KEY_PIN3 = 1;
+   81   1              KEY_PIN4 = 1;
+   82   1              key_last_value5 = key_value5;
+   83   1              key_last_value6 = key_value6;
+   84   1              key_last_value7 = key_value7;
+   85   1              key_last_value8 = key_value8;
+   86   1              key_value5 = KEY_PIN5;
+   87   1              key_value6 = KEY_PIN6;
+   88   1              key_value7 = KEY_PIN7;
+   89   1              key_value8 = KEY_PIN8;
+   90   1              if(key_value5  && !key_last_value5) 
+   91   1              {
+   92   2                      press_temp = Number4;
+   93   2              }
+   94   1              if(key_value6  && !key_last_value6) 
+   95   1              {
+   96   2                      press_temp = Number5;
+   97   2              }
+   98   1              if(key_value7  && !key_last_value7) 
+   99   1              {
+  100   2                      press_temp = Number6;
+  101   2              }
+  102   1              if(key_value8  && !key_last_value8) 
+  103   1              {
+  104   2                      press_temp = LetterB;
+  105   2              }
+  106   1              
+  107   1              KEY_PIN1 = 1;
+  108   1              KEY_PIN2 = 1;
+  109   1              KEY_PIN3 = 0;
+  110   1              KEY_PIN4 = 1;
+  111   1              key_last_value5 = key_value5;
+  112   1              key_last_value6 = key_value6;
+  113   1              key_last_value7 = key_value7;
+  114   1              key_last_value8 = key_value8;
+  115   1              key_value5 = KEY_PIN5;
+  116   1              key_value6 = KEY_PIN6;
+  117   1              key_value7 = KEY_PIN7;
+  118   1              key_value8 = KEY_PIN8;
+  119   1              if(key_value5  && !key_last_value5) 
+  120   1              {
+  121   2                      press_temp = Number7;
+  122   2              }
+  123   1              if(key_value6  && !key_last_value6) 
+C251 COMPILER V5.60.0,  key                                                                27/03/26  11:12:46  PAGE 3   
+
+  124   1              {
+  125   2                      press_temp = Number8;
+  126   2              }
+  127   1              if(key_value7  && !key_last_value7) 
+  128   1              {
+  129   2                      press_temp = Number9;
+  130   2              }
+  131   1              if(key_value8  && !key_last_value8) 
+  132   1              {
+  133   2                      press_temp = LetterC;
+  134   2              }
+  135   1              
+  136   1              KEY_PIN1 = 1;
+  137   1              KEY_PIN2 = 1;
+  138   1              KEY_PIN3 = 1;
+  139   1              KEY_PIN4 = 0;
+  140   1              key_last_value5 = key_value5;
+  141   1              key_last_value6 = key_value6;
+  142   1              key_last_value7 = key_value7;
+  143   1              key_last_value8 = key_value8;
+  144   1              key_value5 = KEY_PIN5;
+  145   1              key_value6 = KEY_PIN6;
+  146   1              key_value7 = KEY_PIN7;
+  147   1              key_value8 = KEY_PIN8;
+  148   1              if(key_value5  && !key_last_value5) 
+  149   1              {
+  150   2                      press_temp = Signx;
+  151   2              }
+  152   1              if(key_value6  && !key_last_value6) 
+  153   1              {
+  154   2                      press_temp = Number0;
+  155   2              }
+  156   1              if(key_value7  && !key_last_value7) 
+  157   1              {
+  158   2                      press_temp = Signj;
+  159   2              }
+  160   1              if(key_value8  && !key_last_value8) 
+  161   1              {
+  162   2                      press_temp = LetterD;
+  163   2              }
+  164   1      
+  165   1              KEY_PIN1 = 1;
+  166   1              KEY_PIN2 = 1;
+  167   1              KEY_PIN3 = 1;
+  168   1              KEY_PIN4 = 1;
+  169   1              return (press_temp);
+  170   1      }
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =       828     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =        16     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =         6     ------
+C251 COMPILER V5.60.0,  key                                                                27/03/26  11:12:46  PAGE 4   
+
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,416 @@
+C251 COMPILER V5.60.0,  SEEKFREE_DL1B                                                      27/03/26  11:12:41  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE SEEKFREE_DL1B
+OBJECT MODULE PLACED IN .\Out_File\SEEKFREE_DL1B.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE SEEKFREE_DL1B.c XSMALL INTR2 UNSIGNED_CHAR FLOAT64 OPTIMIZE(5,SPEED) B
+                    -ROWSE ORDER INCDIR(..\..\Libraries\libraries;..\..\Libraries\seekfree_libraries;..\..\Libraries\seekfree_peripheral;..\C
+                    -ODE;..\USER\inc;..\USER\src) DEBUG PRINT(.\Out_File\SEEKFREE_DL1B.lst) OBJECT(.\Out_File\SEEKFREE_DL1B.obj) 
+
+stmt  level    source
+
+    1          /********************************************************************************************************
+             -*************
+    2          * MM32F527X-E9P Opensourec Library 即（MM32F527X-E9P 开源库）是一个基于官方 SDK 接口的第三方开源库
+    3          * Copyright (c) 2022 SEEKFREE 逐飞科技
+    4          * 
+    5          * 本文件是 MM32F527X-E9P 开源库的一部分
+    6          * 
+    7          * MM32F527X-E9P 开源库 是免费软件
+    8          * 您可以根据自由软件基金会发布的 GPL（GNU General Public License，即 GNU通用公共许可证）的条款
+    9          * 即 GPL 的第3版（即 GPL3.0）或（您选择的）任何后来的版本，重新发布和/或修改它
+   10          * 
+   11          * 本开源库的发布是希望它能发挥作用，但并未对其作任何的保证
+   12          * 甚至没有隐含的适销性或适合特定用途的保证
+   13          * 更多细节请参见 GPL
+   14          * 
+   15          * 您应该在收到本开源库的同时收到一份 GPL 的副本
+   16          * 如果没有，请参阅<https://www.gnu.org/licenses/>
+   17          * 
+   18          * 额外注明：
+   19          * 本开源库使用 GPL3.0 开源许可证协议 以上许可申明为译文版本
+   20          * 许可申明英文版在 libraries/doc 文件夹下的 GPL3_permission_statement.txt 文件中
+   21          * 许可证副本在 libraries 文件夹下 即该文件夹下的 LICENSE 文件
+   22          * 欢迎各位使用并传播本程序 但修改内容时必须保留逐飞科技的版权声明（即本声明）
+   23          * 
+   24          * 文件名称          zf_device_dl1b
+   25          * 公司名称          成都逐飞科技有限公司
+   26          * 版本信息          查看 libraries/doc 文件夹内 version 文件 版本说明
+   27          * 开发环境          MDK 5.37
+   28          * 适用平台          MM32F527X_E9P
+   29          * 店铺链接          https://seekfree.taobao.com/
+   30          * 
+   31          * 修改记录
+   32          * 日期              作者                备注
+   33          * 2022-08-10        Teternal            first version
+   34          *********************************************************************************************************
+             -***********/
+   35          /********************************************************************************************************
+             -*************
+   36          * 接线定义：
+   37          *                   ------------------------------------
+   38          *                   模块管脚            单片机管脚
+   39          *                   SCL                 查看 zf_device_dl1b.h 中 DL1B_SCL_PIN  宏定义
+   40          *                   SDA                 查看 zf_device_dl1b.h 中 DL1B_SDA_PIN  宏定义
+   41          *                   XS                  查看 zf_device_dl1b.h 中 DL1B_XS_PIN  宏定义
+   42          *                   VCC                 5V 电源
+   43          *                   GND                 电源地
+   44          *                   ------------------------------------
+   45          *********************************************************************************************************
+             -***********/
+   46          
+   47          #include "zf_delay.h"
+   48          #include "SEEKFREE_DL1B.h"
+   49          #include "SEEKFREE_CONFIG.h"
+   50          
+   51          const unsigned char code dl1b_default_configuration [135];
+   52          
+   53          uint8 dl1b_init_flag = 0;
+C251 COMPILER V5.60.0,  SEEKFREE_DL1B                                                      27/03/26  11:12:41  PAGE 2   
+
+   54          uint8 dl1b_finsh_flag = 0;
+   55          uint16 dl1b_distance_mm = 8192;
+   56          
+   57          
+   58          #define dl1b_transfer_8bit_array(tdata, tlen, rdata, rlen)      (dl1b_iic_transfer_8bit_array((tdata), (t
+             -len), (rdata), (rlen)))
+   59          
+   60          
+   61          #define GET_DL1B_SDA                            DL1B_SDA_PIN
+   62          #define DL1B_SDA_LOW()                  DL1B_SDA_PIN = 0                //IO口输出低电平
+   63          #define DL1B_SDA_HIGH()                 DL1B_SDA_PIN = 1                //IO口输出高电平
+   64          
+   65          #define DL1B_SCL_LOW()                  DL1B_SCL_PIN = 0                //IO口输出低电平
+   66          #define DL1B_SCL_HIGH()                 DL1B_SCL_PIN = 1                //IO口输出高电平
+   67          
+   68          #define ack 1      //主应答
+   69          #define no_ack 0   //从应答     
+   70          
+   71          //-------------------------------------------------------------------------------------------------------
+             -------------
+   72          //  @brief      模拟IIC延时
+   73          //  @return     void                                            
+   74          //  @since      v1.0
+   75          //  Sample usage:                               如果IIC通讯失败可以尝试增加j的值
+   76          //-------------------------------------------------------------------------------------------------------
+             -------------
+   77          static void dl1b_simiic_delay(void)
+   78          {
+   79   1          uint16 j=DL1B_SOFT_IIC_DELAY;   
+   80   1              while(j--);
+   81   1      }
+   82          
+   83          //内部使用，用户无需调用
+   84          static void dl1b_simiic_start(void)
+   85          {
+   86   1              DL1B_SDA_HIGH();
+   87   1              DL1B_SCL_HIGH();
+   88   1              dl1b_simiic_delay();
+   89   1              DL1B_SDA_LOW();
+   90   1              dl1b_simiic_delay();
+   91   1              DL1B_SCL_LOW();
+   92   1      }
+   93          
+   94          //内部使用，用户无需调用
+   95          static void dl1b_simiic_stop(void)
+   96          {
+   97   1              DL1B_SDA_LOW();
+   98   1              DL1B_SCL_LOW();
+   99   1              dl1b_simiic_delay();
+  100   1              DL1B_SCL_HIGH();
+  101   1              dl1b_simiic_delay();
+  102   1              DL1B_SDA_HIGH();
+  103   1              dl1b_simiic_delay();
+  104   1      }
+  105          
+  106          //主应答(包含ack:SDA=0和no_ack:SDA=0)
+  107          //内部使用，用户无需调用
+  108          static void dl1b_simiic_sendack(unsigned char ack_dat)
+  109          {
+  110   1          DL1B_SCL_LOW();
+  111   1              dl1b_simiic_delay();
+  112   1              if(ack_dat) DL1B_SDA_LOW();
+  113   1          else        DL1B_SDA_HIGH();
+  114   1      
+  115   1          DL1B_SCL_HIGH();
+  116   1          dl1b_simiic_delay();
+C251 COMPILER V5.60.0,  SEEKFREE_DL1B                                                      27/03/26  11:12:41  PAGE 3   
+
+  117   1          DL1B_SCL_LOW();
+  118   1          dl1b_simiic_delay();
+  119   1      }
+  120          
+  121          
+  122          static int dl1b_sccb_waitack(void)
+  123          {
+  124   1          DL1B_SCL_LOW();
+  125   1      
+  126   1              dl1b_simiic_delay();
+  127   1              
+  128   1              DL1B_SCL_HIGH();
+  129   1          dl1b_simiic_delay();
+  130   1              
+  131   1          if(GET_DL1B_SDA)           //应答为高电平，异常，通信失败
+  132   1          {
+  133   2      
+  134   2              DL1B_SCL_LOW();
+  135   2              return 0;
+  136   2          }
+  137   1      
+  138   1          DL1B_SCL_LOW();
+  139   1              dl1b_simiic_delay();
+  140   1          return 1;
+  141   1      }
+  142          
+  143          //字节发送程序
+  144          //发送c(可以是数据也可是地址)，送完后接收从应答
+  145          //不考虑从应答位
+  146          //内部使用，用户无需调用
+  147          static void dl1b_send_ch(uint8 c)
+  148          {
+  149   1              uint8 i = 8;
+  150   1          while(i--)
+  151   1          {
+  152   2              if(c & 0x80)    DL1B_SDA_HIGH();//SDA 输出数据
+  153   2              else                    DL1B_SDA_LOW();
+  154   2              c <<= 1;
+  155   2              dl1b_simiic_delay();
+  156   2              DL1B_SCL_HIGH();                //SCL 拉高，采集信号
+  157   2              dl1b_simiic_delay();
+  158   2              DL1B_SCL_LOW();                //SCL 时钟线拉低
+  159   2          }
+  160   1              dl1b_sccb_waitack();
+  161   1      }
+  162          
+  163          
+  164          //字节接收程序
+  165          //接收器件传来的数据，此程序应配合|主应答函数|使用
+  166          //内部使用，用户无需调用
+  167          static uint8 dl1b_read_ch(uint8 ack_x)
+  168          {
+  169   1          uint8 i;
+  170   1          uint8 c;
+  171   1          c=0;
+  172   1          DL1B_SCL_LOW();
+  173   1          dl1b_simiic_delay();
+  174   1          DL1B_SDA_HIGH();             
+  175   1      
+  176   1          for(i=0;i<8;i++)
+  177   1          {
+  178   2              dl1b_simiic_delay();
+  179   2              DL1B_SCL_LOW();         //置时钟线为低，准备接收数据位
+  180   2              dl1b_simiic_delay();
+  181   2              DL1B_SCL_HIGH();         //置时钟线为高，使数据线上数据有效
+  182   2              dl1b_simiic_delay();
+C251 COMPILER V5.60.0,  SEEKFREE_DL1B                                                      27/03/26  11:12:41  PAGE 4   
+
+  183   2              c<<=1;
+  184   2              if(GET_DL1B_SDA) 
+  185   2              {
+  186   3                  c+=1;   //读数据位，将接收的数据存c
+  187   3              }
+  188   2          }
+  189   1      
+  190   1              DL1B_SCL_LOW();
+  191   1              dl1b_simiic_delay();
+  192   1              dl1b_simiic_sendack(ack_x);
+  193   1              
+  194   1          return c;
+  195   1      }
+  196          
+  197          
+  198          //-------------------------------------------------------------------------------------------------------
+             -------------
+  199          // 函数简介     软件 IIC 接口传输 8bit 数组 先写后读取
+  200          // 参数说明     *write_data     发送数据存放缓冲区
+  201          // 参数说明     write_len       发送缓冲区长度
+  202          // 参数说明     *read_data      读取数据存放缓冲区
+  203          // 参数说明     read_len        读取缓冲区长度
+  204          // 返回参数     void            
+  205          // 使用示例     iic_transfer_8bit_array(IIC_1, addr, data, 64, data, 64);
+  206          // 备注信息     
+  207          //-------------------------------------------------------------------------------------------------------
+             -------------
+  208          void dl1b_iic_transfer_8bit_array (const uint8 *write_data, uint32 write_len, uint8 *read_data, uint32 re
+             -ad_len)
+  209          {
+  210   1      
+  211   1          dl1b_simiic_start();
+  212   1          dl1b_send_ch(DL1B_DEV_ADDR << 1);
+  213   1          while(write_len --)
+  214   1          {
+  215   2              dl1b_send_ch(*write_data ++);
+  216   2          }
+  217   1          dl1b_simiic_start();
+  218   1          dl1b_send_ch(DL1B_DEV_ADDR << 1 | 0x01);
+  219   1          while(read_len --)
+  220   1          {
+  221   2                      // 前面7位需要回复ack，最后1位不需要回复ack.
+  222   2              *read_data ++ = dl1b_read_ch(read_len != 0);
+  223   2          }
+  224   1          dl1b_simiic_stop();
+  225   1      }
+  226          
+  227          
+  228          
+  229          
+  230          
+  231          //-------------------------------------------------------------------------------------------------------
+             -------------
+  232          // 函数简介     返回以毫米为单位的范围读数
+  233          // 参数说明     void
+  234          // 返回参数     void
+  235          // 使用示例     dl1b_get_distance();
+  236          // 备注信息     在开始单次射程测量后也调用此函数
+  237          //-------------------------------------------------------------------------------------------------------
+             -------------
+  238          void dl1b_get_distance (void)
+  239          {
+  240   1          if(dl1b_init_flag)
+  241   1          {
+  242   2              uint8 data_buffer[3];
+  243   2              int16 dl1b_distance_temp = 0;
+C251 COMPILER V5.60.0,  SEEKFREE_DL1B                                                      27/03/26  11:12:41  PAGE 5   
+
+  244   2      
+  245   2              data_buffer[0] = DL1B_GPIO__TIO_HV_STATUS >> 8;
+  246   2              data_buffer[1] = DL1B_GPIO__TIO_HV_STATUS & 0xFF;
+  247   2              dl1b_transfer_8bit_array(data_buffer, 2, &data_buffer[2], 1);
+  248   2      
+  249   2              if(data_buffer[2])
+  250   2              {
+  251   3      
+  252   3                  data_buffer[0] = DL1B_SYSTEM__INTERRUPT_CLEAR >> 8;
+  253   3                  data_buffer[1] = DL1B_SYSTEM__INTERRUPT_CLEAR & 0xFF;
+  254   3                  data_buffer[2] = 0x01;
+  255   3                  dl1b_transfer_8bit_array(data_buffer, 3, data_buffer, 0);// clear Interrupt
+  256   3      
+  257   3                  data_buffer[0] = DL1B_RESULT__RANGE_STATUS >> 8;
+  258   3                  data_buffer[1] = DL1B_RESULT__RANGE_STATUS & 0xFF;
+  259   3                  dl1b_transfer_8bit_array(data_buffer, 2, &data_buffer[2], 1);
+  260   3                  
+  261   3                  if(0x89 == data_buffer[2])
+  262   3                  {
+  263   4                      data_buffer[0] = DL1B_RESULT__FINAL_CROSSTALK_CORRECTED_RANGE_MM_SD0 >> 8;
+  264   4                      data_buffer[1] = DL1B_RESULT__FINAL_CROSSTALK_CORRECTED_RANGE_MM_SD0 & 0xFF;
+  265   4                      dl1b_transfer_8bit_array(data_buffer, 2, data_buffer, 2);
+  266   4                      dl1b_distance_temp = data_buffer[0];
+  267   4                      dl1b_distance_temp = (dl1b_distance_temp << 8) | data_buffer[1];
+  268   4                      
+  269   4                      if(dl1b_distance_temp > 4000 || dl1b_distance_temp < 0)
+  270   4                      {
+  271   5                          dl1b_distance_mm = 8192;
+  272   5                          dl1b_finsh_flag = 0;
+  273   5                      }
+  274   4                      else
+  275   4                      {
+  276   5                          dl1b_distance_mm = dl1b_distance_temp;
+  277   5                          dl1b_finsh_flag = 1;
+  278   5                      }
+  279   4                  }
+  280   3                  else
+  281   3                  {
+  282   4                      dl1b_distance_mm = 8192;
+  283   4                      dl1b_finsh_flag = 0;
+  284   4                  }
+  285   3              }
+  286   2              else
+  287   2              {
+  288   3                  dl1b_distance_mm = 8192;
+  289   3                  dl1b_finsh_flag = 0;
+  290   3              }
+  291   2          }
+  292   1      }
+  293          
+  294          
+  295          
+  296          //-------------------------------------------------------------------------------------------------------
+             -------------
+  297          // 函数简介     初始化 DL1B
+  298          // 参数说明     void
+  299          // 返回参数     uint8           1-初始化失败 0-初始化成功
+  300          // 使用示例     dl1b_init();
+  301          // 备注信息
+  302          //-------------------------------------------------------------------------------------------------------
+             -------------
+  303          uint8 dl1b_init (void)
+  304          {
+  305   1          uint8   return_state    = 0;
+  306   1          uint8   data_buffer[2 + sizeof(dl1b_default_configuration)]; 
+  307   1          uint16  time_out_count  = 0;
+C251 COMPILER V5.60.0,  SEEKFREE_DL1B                                                      27/03/26  11:12:41  PAGE 6   
+
+  308   1      
+  309   1      
+  310   1          do
+  311   1          {
+  312   2              delay_ms(50);
+  313   2              DL1B_XS_PIN = 0;
+  314   2              delay_ms(10);
+  315   2              DL1B_XS_PIN = 1;
+  316   2              delay_ms(50);
+  317   2      
+  318   2              data_buffer[0] = DL1B_FIRMWARE__SYSTEM_STATUS >> 8;
+  319   2              data_buffer[1] = DL1B_FIRMWARE__SYSTEM_STATUS & 0xFF;
+  320   2              dl1b_transfer_8bit_array(data_buffer, 2, &data_buffer[2], 1);
+  321   2              return_state = (0x01 == (data_buffer[2] & 0x01)) ? (0) : (1);
+  322   2              if(1 == return_state)
+  323   2              {
+  324   3                  break;
+  325   3              }
+  326   2      
+  327   2              data_buffer[0] = DL1B_I2C_SLAVE__DEVICE_ADDRESS >> 8;
+  328   2              data_buffer[1] = DL1B_I2C_SLAVE__DEVICE_ADDRESS & 0xFF;
+  329   2              memcpy(&data_buffer[2], (uint8 *)dl1b_default_configuration, sizeof(dl1b_default_configuration));
+  330   2              dl1b_transfer_8bit_array(data_buffer, 2 + sizeof(dl1b_default_configuration), data_buffer, 0);
+  331   2      
+  332   2              while(1)
+  333   2              {
+  334   3                  data_buffer[0] = DL1B_GPIO__TIO_HV_STATUS >> 8;
+  335   3                  data_buffer[1] = DL1B_GPIO__TIO_HV_STATUS & 0xFF;
+  336   3                  dl1b_transfer_8bit_array(data_buffer, 2, &data_buffer[2], 1);
+  337   3                  if(0x00 == (data_buffer[2] & 0x01))
+  338   3                  {
+  339   4                      time_out_count = 0;
+  340   4                      break;
+  341   4                  }
+  342   3                  if(DL1B_TIMEOUT_COUNT < time_out_count ++)
+  343   3                  {
+  344   4                      return_state = 1;
+  345   4                      break;
+  346   4                  }
+  347   3                  delay_ms(1);
+  348   3              }
+  349   2      
+  350   2              dl1b_init_flag = 1;
+  351   2          }while(0);
+  352   1      
+  353   1      
+  354   1          return return_state;
+  355   1      }
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =       968     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =         4        152
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+C251 COMPILER V5.60.0,  SEEKFREE_DL1B                                                      27/03/26  11:12:41  PAGE 7   
+
+  hconst size          =        16     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

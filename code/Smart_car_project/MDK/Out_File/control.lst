@@ -1,0 +1,108 @@
+C251 COMPILER V5.60.0,  control                                                            04/03/23  11:04:25  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE control
+OBJECT MODULE PLACED IN .\Out_File\control.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE ..\CODE\control.c XSMALL INTR2 UNSIGNED_CHAR FLOAT64 BROWSE ORDER INCD
+                    -IR(..\..\Libraries\libraries;..\..\Libraries\seekfree_libraries;..\..\Libraries\seekfree_peripheral;..\CODE;..\USER\inc;
+                    -..\USER\src) DEBUG PRINT(.\Out_File\control.lst) OBJECT(.\Out_File\control.obj) 
+
+stmt  level    source
+
+    1          /*
+    2           * control.c
+    3           *
+    4           *  Created on: 2023年1月31日
+    5           *      Author: 天河
+    6           */
+    7          #include <adc.h>
+    8          #include <servomotor.h>
+    9          #include "headfile.h"
+   10          #include "control.h"
+   11          #include"encoder.h"
+*** ERROR C42 IN LINE 22 OF ..\CODE\encoder.h: 'get_total_encoder': not in formal parameter list
+   12          
+   13          int lostline_flag;
+*** ERROR C42 IN LINE 13 OF ..\CODE\control.c: 'lostline_flag': not in formal parameter list
+   14          int lostline_dir;
+*** ERROR C42 IN LINE 14 OF ..\CODE\control.c: 'lostline_dir': not in formal parameter list
+   15          float pwm_dirmax=1200;
+*** ERROR C142 IN LINE 15 OF ..\CODE\control.c: illegal initialization
+   16          float pwm_dirmin=800;
+*** ERROR C142 IN LINE 16 OF ..\CODE\control.c: illegal initialization
+   17          int angle_save[20];
+*** ERROR C42 IN LINE 17 OF ..\CODE\control.c: 'angle_save': not in formal parameter list
+   18          
+   19          
+   20          
+   21          //==========记录转角============
+   22          void angle_record(void)
+   23          {
+*** ERROR C42 IN LINE 23 OF ..\CODE\control.c: 'angle_record': not in formal parameter list
+*** ERROR C25 IN LINE 23 OF ..\CODE\control.c: syntax error near '{'
+   24          
+   25            int i;
+   26          
+   27            for(i=0;i<19;i++)
+   28              angle_save[i]=angle_save[i+1];
+   29          
+   30            angle_save[19]=Dutyresult-Midduty;
+   31          
+   32          }
+   33          //========== 丢线判断 =========
+   34          void lost_line_judge(void)
+   35          {
+   36             if(lostline_flag==0)//丢线标志为0时进入
+   37             {
+   38               if((ad0<500)&&(ad1<500)&&(ad2<500)&&(ad3<500)&&(ad4<500)) //进入丢线条件
+   39                 lostline_flag=1;//丢线标志置1
+   40          
+   41               int i,left=0,right=0;// 左右计数
+   42          
+   43               for(i=10;i<19;i++)//奇数
+   44                        {
+   45                           if(angle_save[i]<0)right++;
+   46                           if(angle_save[i]>=0)left++;
+   47                        }
+   48          
+   49                    if(left>right)
+C251 COMPILER V5.60.0,  control                                                            04/03/23  11:04:25  PAGE 2   
+
+   50                        lostline_dir=1;//左丢线标志
+   51                    if(left<right)
+   52                        lostline_dir=2;//右丢线标志
+   53          
+   54             }
+   55          }
+   56          //================丢线处理=============
+   57          void lostline_deal(void)
+   58          {
+   59          
+   60              if(lostline_flag==1)
+   61                {
+   62                  if(lostline_dir==1)//左丢线
+   63                      Dutyresult=pwm_dirmax;
+   64          
+   65                  if(lostline_dir==2)//右丢线
+   66                      Dutyresult=pwm_dirmin;;
+   67          
+   68                  if((ad0>=500)&&(ad4>=500))//右左
+   69                  {
+   70                    lostline_flag=0;
+   71                   }
+   72                }
+   73          }
+   74          
+   75          
+   76          
+   77          
+   78          
+   79          
+   80          
+   81          
+   82          
+   83          
+   84          
+*** ERROR C7 IN LINE 84 OF ..\CODE\control.c: compilation aborted
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  9 ERROR(S)

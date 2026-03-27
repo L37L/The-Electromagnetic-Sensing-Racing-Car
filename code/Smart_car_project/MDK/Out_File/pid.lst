@@ -1,0 +1,84 @@
+C251 COMPILER V5.60.0,  pid                                                                27/03/26  11:12:45  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE pid
+OBJECT MODULE PLACED IN .\Out_File\pid.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE pid.c XSMALL INTR2 UNSIGNED_CHAR FLOAT64 OPTIMIZE(5,SPEED) BROWSE ORDE
+                    -R INCDIR(..\..\Libraries\libraries;..\..\Libraries\seekfree_libraries;..\..\Libraries\seekfree_peripheral;..\CODE;..\USE
+                    -R\inc;..\USER\src) DEBUG PRINT(.\Out_File\pid.lst) OBJECT(.\Out_File\pid.obj) 
+
+stmt  level    source
+
+    1          #include "pid.h"
+    2          
+    3          
+    4          void PID_CREATE(pid_param_t *pid, float kp_p, float ki_p, float kd_p, float low_pass_p, int16 max_p, int1
+             -6 max_i, int16 max_d)
+    5          {
+    6   1              pid->kp = kp_p;
+    7   1              pid->ki = ki_p;
+    8   1              pid->kd = kd_p;
+    9   1              pid->low_pass = low_pass_p;
+   10   1              pid->out_p = 0;
+   11   1              pid->out_i = 0;
+   12   1              pid->out_d = 0;
+   13   1              pid->p_max = max_p;
+   14   1              pid->i_max = max_i;
+   15   1              pid->d_max = max_d;
+   16   1      }
+   17                          
+   18                  
+   19          // 常规PID
+   20          int16 pid_solve(pid_param_t *pid, float error) 
+   21          {
+   22   1          pid->out_d = (error - pid->out_p) * pid->low_pass + pid->out_d * (1 - pid->low_pass); //低通滤波
+   23   1          pid->out_p = error;
+   24   1          pid->out_i += error;
+   25   1      
+   26   1          if (pid->ki != 0) 
+   27   1                      pid->out_i = MINMAX(pid->out_i, -pid->i_max / pid->ki, pid->i_max / pid->ki);
+   28   1              
+   29   1          return (pid->kp * pid->out_p + pid->ki * pid->out_i + pid->kd * pid->out_d);
+   30   1      }
+   31          
+   32          
+   33          // 增量式PID
+   34          int16 increment_pid_solve(pid_param_t *pid, float error) {
+   35   1          pid->out_d = MINMAX(pid->kd * (error - 2 * pid->pre_error + pid->pre_pre_error), -pid->d_max, pid->d_
+             -max);
+   36   1          pid->out_p = MINMAX(pid->kp * (error - pid->pre_error), -pid->p_max, pid->p_max);
+   37   1          pid->out_i = MINMAX(pid->ki * error, -pid->i_max, pid->i_max);
+   38   1      
+   39   1          pid->pre_pre_error = pid->pre_error;
+   40   1          pid->pre_error = error;
+   41   1      
+   42   1          return (pid->out_p + pid->out_i + pid->out_d);
+   43   1      }
+   44          
+   45          
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =      1001     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+C251 COMPILER V5.60.0,  pid                                                                27/03/26  11:12:45  PAGE 2   
+
+  edata size           =    ------         18
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =    ------     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

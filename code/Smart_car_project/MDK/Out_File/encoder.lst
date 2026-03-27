@@ -1,0 +1,86 @@
+C251 COMPILER V5.60.0,  encoder                                                            27/03/26  11:12:45  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE encoder
+OBJECT MODULE PLACED IN .\Out_File\encoder.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE encoder.c XSMALL INTR2 UNSIGNED_CHAR FLOAT64 OPTIMIZE(5,SPEED) BROWSE 
+                    -ORDER INCDIR(..\..\Libraries\libraries;..\..\Libraries\seekfree_libraries;..\..\Libraries\seekfree_peripheral;..\CODE;..
+                    -\USER\inc;..\USER\src) DEBUG PRINT(.\Out_File\encoder.lst) OBJECT(.\Out_File\encoder.obj) 
+
+stmt  level    source
+
+    1          #include "encoder.h"
+    2          
+    3          #define PI 3.14159265
+    4          
+    5          float low_pass_encoder =  0.3;
+    6          float dis = 0;          //路程
+    7          
+    8          void encoder_init(void)
+    9          {
+   10   1          ctimer_count_init(SPEEDL_PLUSE);//定时编码器引脚初始化 (两轮)
+   11   1          ctimer_count_init(SPEEDR_PLUSE);
+   12   1              motor_l.encoder_raw = 0; motor_r.encoder_raw = 0;
+   13   1              motor_l.total_encoder = 0; motor_r.total_encoder = 0;
+   14   1      }
+   15          
+   16          void Encoder_read(void)
+   17          {
+   18   1              motor_l.encoder_raw = ctimer_count_read(SPEEDL_PLUSE) / 2.;     // 定时器取值
+   19   1              motor_r.encoder_raw = ctimer_count_read(SPEEDR_PLUSE) / 2.;    // 定时器取值
+   20   1              if(SPEEDL_DIR == 0)             //反转
+   21   1              {
+   22   2                      motor_l.encoder_raw = -1 * motor_l.encoder_raw;
+   23   2              }
+   24   1              if(SPEEDR_DIR == 1)
+   25   1              {
+   26   2                      motor_r.encoder_raw = -1 * motor_r.encoder_raw;
+   27   2              }
+   28   1              //后一值*低通系数 + 前一值*（1-低通系数）
+   29   1          motor_l.encoder_speed = motor_l.encoder_speed * low_pass_encoder + motor_l.encoder_raw * (1-low_pass_
+             -encoder);//低通滤波
+   30   1          motor_r.encoder_speed = motor_r.encoder_speed * low_pass_encoder + motor_r.encoder_raw * (1-low_pass_
+             -encoder);
+   31   1      
+   32   1              motor_l.total_encoder += (motor_l.encoder_raw * 4 * (PI) * 0.032) / 2250;
+   33   1              motor_r.total_encoder += (motor_r.encoder_raw * 4 * (PI) * 0.032) / 2250;
+   34   1      //      R_dis = L_dis;
+   35   1              ctimer_count_clean(SPEEDL_PLUSE);                // 定时器清空
+   36   1          ctimer_count_clean(SPEEDR_PLUSE);                // 定时器清空
+   37   1      
+   38   1      }
+   39          
+   40          float get_total_encoder(void)
+   41          {
+   42   1      
+   43   1              return (float)((motor_l.total_encoder + motor_r.total_encoder) / 2);
+   44   1              
+   45   1      }
+   46          
+   47          
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =       389     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+C251 COMPILER V5.60.0,  encoder                                                            27/03/26  11:12:45  PAGE 2   
+
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =         8     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =        16     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

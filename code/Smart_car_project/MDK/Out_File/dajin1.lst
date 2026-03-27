@@ -1,0 +1,96 @@
+C251 COMPILER V5.60.0,  dajin1                                                             03/03/23  00:08:31  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE dajin1
+OBJECT MODULE PLACED IN .\Out_File\dajin1.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE ..\CODE\dajin1.c XSMALL INTR2 WARNINGLEVEL(3) BROWSE INCDIR(..\..\Libr
+                    -aries\libraries;..\..\Libraries\seekfree_libraries;..\..\Libraries\seekfree_peripheral;..\CODE;..\USER\inc;..\USER\src) 
+                    -DEBUG PRINT(.\Out_File\dajin1.lst) TABS(2) OBJECT(.\Out_File\dajin1.obj) 
+
+stmt  level    source
+
+    1          /*
+    2           * dajin1.c
+    3           *
+    4           *  Created on: 2022��10��11��
+    5           *      Author: ���
+    6           */
+    7          /*大津�?**/
+    8          #define LCDH 120
+    9          #define LCDW 188
+   10          #include "dajin1.h"
+   11          #include "headfile.h"
+   12          short GetOSTU ()
+   13          {
+   14   1          signed short i, j;
+   15   1          unsigned long Amount = 0;
+   16   1          unsigned long PixelBack = 0;
+   17   1          unsigned long PixelshortegralBack = 0;
+   18   1          unsigned long Pixelshortegral = 0;
+   19   1          signed long PixelshortegralFore = 0;
+   20   1          signed long PixelFore = 0;
+   21   1          float OmegaBack, OmegaFore, MicroBack, MicroFore, SigmaB, Sigma; // 类间方差;
+   22   1          signed short MinValue, MaxValue;
+   23   1          signed short Threshold = 0;
+   24   1          unsigned char HistoGram[256];              //
+   25   1      
+   26   1          for (j = 0; j < 256; j++)
+   27   1              HistoGram[j] = 0; //初始化灰度直方图
+   28   1      
+   29   1          for (j = 0; j < LCDH; j++)
+   30   1          {
+   31   2              for (i = 0; i < LCDW; i++)
+   32   2              {
+   33   3                  HistoGram[mt9v03x_image[j][i]]++; //统计灰度级中每个像素在整幅图像中的个�?
+*** ERROR C67 IN LINE 33 OF ..\CODE\dajin1.c: 'mt9v03x_image': undefined identifier
+   34   3              }
+   35   2          }
+   36   1      
+   37   1          for (MinValue = 0; MinValue < 256 && HistoGram[MinValue] == 0; MinValue++);        //获取朢�小灰
+             -度的�?
+   38   1          for (MaxValue = 255; MaxValue > MinValue && HistoGram[MinValue] == 0; MaxValue--); //获取朢�大灰
+             -度的�?
+   39   1      
+   40   1          if (MaxValue == MinValue)
+   41   1              return MaxValue;         // 图像中只有一个颜�?
+   42   1          if (MinValue + 1 == MaxValue)
+   43   1              return MinValue;        // 图像中只有二个颜�?
+   44   1      
+   45   1          for (j = MinValue; j <= MaxValue; j++)
+   46   1              Amount += HistoGram[j];        //  像素总数
+   47   1      
+   48   1          Pixelshortegral = 0;
+   49   1          for (j = MinValue; j <= MaxValue; j++)
+   50   1          {
+   51   2              Pixelshortegral += HistoGram[j] * j;        //灰度值��数
+   52   2          }
+   53   1          SigmaB = -1;
+   54   1          for (j = MinValue; j < MaxValue; j++)
+C251 COMPILER V5.60.0,  dajin1                                                             03/03/23  00:08:31  PAGE 2   
+
+   55   1          {
+   56   2              PixelBack = PixelBack + HistoGram[j];     //前景像素点数
+   57   2              PixelFore = Amount - PixelBack;           //背景像素点数
+   58   2              OmegaBack = (float) PixelBack / Amount;   //前景像素百分�?
+   59   2              OmegaFore = (float) PixelFore / Amount;   //背景像素百分�?
+   60   2              PixelshortegralBack += HistoGram[j] * j;  //前景灰度�?
+   61   2              PixelshortegralFore = Pixelshortegral - PixelshortegralBack;  //背景灰度�?
+   62   2              MicroBack = (float) PixelshortegralBack / PixelBack;   //前景灰度百分�?
+   63   2              MicroFore = (float) PixelshortegralFore / PixelFore;   //背景灰度百分�?
+   64   2              Sigma = OmegaBack * OmegaFore * (MicroBack - MicroFore) * (MicroBack - MicroFore);   //计算类�
+             -��方差
+   65   2              if (Sigma > SigmaB)                    //遍历朢�大的类间方差g //找出朢�大类间方�
+             -�以及对应的阈��?
+   66   2              {
+   67   3                  SigmaB = Sigma;
+   68   3                  Threshold = j;
+   69   3              }
+   70   2          }
+   71   1          return Threshold;                        //返回朢�佳阈�?
+   72   1      }
+   73          
+   74          
+   75          
+   76          
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  1 ERROR(S)

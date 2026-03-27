@@ -1,0 +1,149 @@
+C251 COMPILER V5.60.0,  adc                                                                27/03/26  11:12:44  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE adc
+OBJECT MODULE PLACED IN .\Out_File\adc.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE adc.c XSMALL INTR2 UNSIGNED_CHAR FLOAT64 OPTIMIZE(5,SPEED) BROWSE ORDE
+                    -R INCDIR(..\..\Libraries\libraries;..\..\Libraries\seekfree_libraries;..\..\Libraries\seekfree_peripheral;..\CODE;..\USE
+                    -R\inc;..\USER\src) DEBUG PRINT(.\Out_File\adc.lst) OBJECT(.\Out_File\adc.obj) 
+
+stmt  level    source
+
+    1          #include "adc.h"
+    2          
+    3          #define AD_Val_max 4095
+    4          #define N 5
+    5          #define NUM 5
+    6          
+    7          
+    8          float AD_value[NUM][5]={{0},{0},{0},{0},{0}} , adtemp , ad_sum[NUM] , ad_ave[NUM];
+    9          float AD_V[NUM], AD_last[NUM] = {0};
+   10          float RAW[NUM];
+   11          float ad0,ad1,ad2,ad3,ad4 ; //0左后 1左前 2 前中 3 右前 4右后   0，2，4横；1，3竖
+   12          //float MAX[NUM] = {2850, 2850, 2500, 2850, 2800};
+   13          float MAX[NUM] = {3802, 3800, 3520, 3810, 3805}; //实际情况改值，实际采集的最大值
+   14          int8 count = 0;
+   15          
+   16          void Adinductance_init(void) /*初始化*///AD电感
+   17          {
+   18   1          adc_init(ADC_P06, ADC_SYSclk_DIV_2);//
+   19   1          adc_init(ADC_P05, ADC_SYSclk_DIV_2);//
+   20   1              adc_init(ADC_P15, ADC_SYSclk_DIV_2);//
+   21   1          adc_init(ADC_P00, ADC_SYSclk_DIV_2);//
+   22   1          adc_init(ADC_P14, ADC_SYSclk_DIV_2);//
+   23   1      }
+   24          
+   25          void read_AD(void)
+   26          {
+   27   1              int i,j,k;
+   28   1              float AD_ONE[5]={0.0,0.0,0.0,0.0,0.0};
+   29   1              float AD_sum[NUM] = {0};
+   30   1              for(i=0;i<5;i++)
+   31   1              {
+   32   2      //  取值
+   33   2              AD_value[0][i] = adc_once(ADC_P06, ADC_12BIT);//Adaverage(0);
+   34   2          AD_value[1][i] = adc_once(ADC_P05, ADC_12BIT);//Adaverage(1);
+   35   2              AD_value[2][i] = adc_once(ADC_P15, ADC_12BIT);//Adaverage(2);
+   36   2          AD_value[3][i] = adc_once(ADC_P00, ADC_12BIT);//Adaverage(3);
+   37   2          AD_value[4][i] = adc_once(ADC_P14, ADC_12BIT);//Adaverage(4);      //取五个电感（已平均）
+   38   2      //      AD_value[5][i] = Adaverage(5);
+   39   2         }
+   40   1      
+   41   1         for(i=0;i<NUM;i++)
+   42   1         {
+   43   2             for(j=0;j<4;j++)
+   44   2                 {
+   45   3                     for(k=0;k<4-j;k++)
+   46   3                     {
+   47   4                         if(AD_value[i][k] > AD_value[i][k+1])   ///从小到大排序
+   48   4                         {
+   49   5                             adtemp = AD_value[i][k];
+   50   5                             AD_value[i][k] = AD_value[i][k+1];
+   51   5                             AD_value[i][k+1] = adtemp;
+   52   5                         }
+   53   4                     }
+   54   3                 }
+   55   2         }
+   56   1      //  取中间三个值平均
+   57   1         for(i=0;i<NUM;i++)
+C251 COMPILER V5.60.0,  adc                                                                27/03/26  11:12:44  PAGE 2   
+
+   58   1         {
+   59   2             ad_sum[i] = AD_value[i][1] + AD_value[i][2] + AD_value[i][3];
+   60   2             ad_ave[i] = ad_sum[i]/3;
+   61   2         }
+   62   1         //把平均值赋给最后一个
+   63   1         for(i=0;i<NUM;i++)
+   64   1         {
+   65   2             AD_value[i][4] = ad_ave[i];
+   66   2         }
+   67   1         
+   68   1      //   滑动覆盖
+   69   1         for(i=0;i<4;i++)
+   70   1         {
+   71   2             AD_value[0][i] = AD_value[0][i+1];
+   72   2             AD_value[1][i] = AD_value[1][i+1];
+   73   2             AD_value[2][i] = AD_value[2][i+1];
+   74   2             AD_value[3][i] = AD_value[3][i+1];
+   75   2             AD_value[4][i] = AD_value[4][i+1];
+   76   2         }
+   77   1      
+   78   1      //五个电感再次求和
+   79   1         for(i=0;i<5;i++)
+   80   1         {
+   81   2             AD_sum[0] += AD_value[0][i];
+   82   2             AD_sum[1] += AD_value[1][i];
+   83   2             AD_sum[2] += AD_value[2][i];
+   84   2             AD_sum[3] += AD_value[3][i];
+   85   2             AD_sum[4] += AD_value[4][i];
+   86   2      //     AD_sum[5] += AD_value[5][i];
+   87   2         }
+   88   1      //取平均
+   89   1         for(i=0;i<NUM;i++)
+   90   1         {
+   91   2             AD_V[i] =  AD_sum[i]/NUM;
+   92   2                 RAW[i] = AD_sum[i]/NUM;
+   93   2                 if(AD_V[i] > MAX[i]) 
+   94   2                         AD_V[i] = MAX[i];
+   95   2             AD_sum[i] = 0;
+   96   2         }
+   97   1               
+   98   1      
+   99   1         for(i=0;i<NUM;i++)
+  100   1         {   /*************归一化****************/
+  101   2           AD_ONE[i]=(100*AD_V[i]/MAX[i]);    ///AD_V[i]电感读回值（百分比）
+  102   2         }
+  103   1              
+  104   1         ad0=AD_ONE[0];
+  105   1         ad1=AD_ONE[1];
+  106   1         ad2=AD_ONE[2];
+  107   1         ad3=AD_ONE[3];
+  108   1         ad4=AD_ONE[4];
+  109   1              
+  110   1      }
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =       875     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =       245         40
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+C251 COMPILER V5.60.0,  adc                                                                27/03/26  11:12:44  PAGE 3   
+
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =       197     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

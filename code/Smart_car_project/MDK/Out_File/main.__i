@@ -1,0 +1,1 @@
+"..\USER\src\main.c" XSMALL INTR2 UNSIGNED_CHAR FLOAT64 OPTIMIZE (5,SPEED) BROWSE ORDER INCDIR(..\..\Libraries\libraries;..\..\Libraries\seekfree_libraries;..\..\Libraries\seekfree_peripheral;..\CODE;..\USER\inc;..\USER\src) DEBUG PRINT(.\Out_File\main.lst) OBJECT(.\Out_File\main.obj)

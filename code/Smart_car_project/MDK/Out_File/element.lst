@@ -1,0 +1,611 @@
+C251 COMPILER V5.60.0,  element                                                            27/03/26  11:12:47  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE element
+OBJECT MODULE PLACED IN .\Out_File\element.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE element.c XSMALL INTR2 UNSIGNED_CHAR FLOAT64 OPTIMIZE(5,SPEED) BROWSE 
+                    -ORDER INCDIR(..\..\Libraries\libraries;..\..\Libraries\seekfree_libraries;..\..\Libraries\seekfree_peripheral;..\CODE;..
+                    -\USER\inc;..\USER\src) DEBUG PRINT(.\Out_File\element.lst) OBJECT(.\Out_File\element.obj) 
+
+stmt  level    source
+
+    1          #include "element.h"
+    2          //≥ˆ»Îø‚
+    3          float chu_kp = 7.5, chu_kd = 6.5;                               //≥ˆø‚∂Êª˙PID≤Œ ˝
+    4          int8 out_flag;                                                                                                  //––Ω¯◊¥Ã¨
+    5          int8 in_flag = 0;                                                                                               //»Îø‚◊¥Ã¨
+    6          int16 cnt = 0;                                                                                                  //»Îø‚º∆ ±Œª
+    7          float ruku_dis = 0;                                                                                     //»Îø‚æ‡¿Îº«¬º
+    8          int8 number = 0;                                                                                                //ªÙ∂˚ºÏ≤‚±Í÷æŒª
+    9          int16 ruku_time = 105;                                                                  //µπ≥µ ±º‰„–÷µ
+   10          
+   11          //Õ‰÷±µ¿
+   12          int8 zone_flag = 0;                                                                                     //Õ‰÷±µ¿±Í÷æŒª
+   13          float kp_str = 2.0, kd_str = 4.0;
+   14          
+   15          //∆¬µ¿
+   16          int8 podao_flag = 0;                                                                            //∆¬µ¿±Í÷æŒª
+   17          uint32 podao_time = 0;                                                                  //º«¬º∆¬µ¿ ±º‰
+   18          int8 po_finish = 0;                                                                                     //∆¬µ¿ÕÍ≥…±Í÷æ
+   19          
+   20          //ÅGœﬂ
+   21          int8 lost_flag = 0;
+   22          
+   23          //’œ∞≠
+   24          int8 zhangai_flag = 0;                                                                  //’œ∞≠±Í÷æŒª    
+   25          int8 zhangai_state = 0;                                                                 //’œ∞≠◊¥Ã¨
+   26          float zhangai_dis = 0;
+   27          int8 zhangai_finish = 0;
+   28          int16 Dlla_control[4] = {1, 0, 0, 0};                   //∆¬µ¿∫Õ±‹’œ«¯∑÷£¨¥Û”⁄0Œ™±‹’œ£¨–°”⁄0Œ™∆¬µ¿£¨0≤ª◊ˆ¥¶¿Ì
+   29          int8 control_point = 0;
+   30          
+   31          //ª∑µ∫
+   32          int8 lhuandao_flag = 0;
+   33          int8 rhuandao_flag = 0;
+   34          int8 huandao_num = 0;                                                                           //º«¬ºπ˝ª∑µ∫¥Œ ˝
+   35          uint32 huandao_time = 0;                                                                //º«¬ºª∑µ∫ ±º‰
+   36          huandao_type_e huandao_state = NONE;            //ª∑µ∫◊¥Ã¨ª˙
+   37          float huan_kp=1.5, huan_kd=1.0;                                 //ª∑ƒ⁄—≠º£PID≤Œ ˝
+   38          
+   39          //—≠º£
+   40          float s_error;
+   41          float last_error, Difference_error;
+   42          float backup, error_heng, error_xie;                    //∫·µÁ∏–≤Ó÷µ£¨∫·µÁ∏–≤Ó±»∫Õ£¨–±µÁ∏–≤Ó±»∫Õ
+   43          float abserror, ratio;
+   44          int16 a=55, b=200, Limit=100,           ad_referens = 54;//÷±µ¿÷–º‰µÁ∏–÷µ
+   45          
+   46          
+   47          int16 change_duty = 0;
+   48          int16 angle_z = 0;
+   49          int16 angle_y = 0;
+   50          
+   51          int8 rank = 0;          //»¶ ˝
+   52          
+   53          /*********************************************
+   54          *∫Ø ˝£∫¥´∏–∆˜≥ı ºªØ∫Ø ˝
+   55          *∫Ø ˝√˚£∫sensor_init()
+   56          *±∏◊¢£∫
+   57          *********************************************/
+C251 COMPILER V5.60.0,  element                                                            27/03/26  11:12:47  PAGE 2   
+
+   58          void sensor_init(void)
+   59          {
+   60   1      //      imu660ra_init();        //Õ”¬›“«≥ı ºªØ
+   61   1      //      dl1a_init();
+   62   1      }
+   63          
+   64          /*********************************************
+   65          *∫Ø ˝£∫‘™Àÿ¥¶¿Ì∫Ø ˝
+   66          *∫Ø ˝√˚£∫element_deal()
+   67          *±∏◊¢£∫
+   68          *********************************************/
+   69          
+   70          void element_deal(void)
+   71          {
+   72   1              abserror = abs(ad_referens - ad2);                                      //÷–º‰µÁ∏–”Î‘⁄÷±µ¿ ±µƒ∆´≤Ó
+   73   1        ratio = (abserror / ad_referens) * a;                         
+   74   1              Difference_error = s_error - last_error;
+   75   1              if(zone_flag == 1)                                                      //÷±µ¿£®≤Ó±»∫Õ≤Ó£©
+   76   1              {
+   77   2                      goalspeed = speed_strait;
+   78   2                      last_error = s_error;
+   79   2                      s_error = (float)(b * (sqrt(ad4) - sqrt(ad0))) / (ad4 + ad0 + ad2);
+   80   2                      smotor_pid.kp = kp_str; smotor_pid.kd = kd_str;
+   81   2                      change_duty = pid_solve(&smotor_pid, s_error);          
+   82   2              }
+   83   1              if(zone_flag == 2 /*|| zone_flag ==1*/)                                         //Õ‰µ¿£®»˝µÁ∏–—≠º£ + ƒ£∫˝PID£©
+   84   1              {       
+   85   2                      if (error_heng < -0.23 && error_xie < -0.47)     //”“Õ‰
+   86   2          {
+   87   3                              goalspeed = speed_ben;
+   88   3                              last_error = s_error;
+   89   3            s_error = -1* ratio;
+   90   3                              smotor_pid.kp = Fuzzy_P(s_error, Difference_error);
+   91   3            smotor_pid.kd = Fuzzy_D(s_error, Difference_error);
+   92   3                              change_duty = pid_solve(&smotor_pid, s_error);
+   93   3          }
+   94   2          if (error_heng > 0.23 && error_xie > 0.47)      //◊ÛÕ‰
+   95   2          {
+   96   3            goalspeed = speed_ben;
+   97   3                              last_error = s_error;
+   98   3            s_error = ratio;
+   99   3                              smotor_pid.kp = Fuzzy_P(s_error, Difference_error);
+  100   3            smotor_pid.kd = Fuzzy_D(s_error, Difference_error);
+  101   3                              change_duty = pid_solve(&smotor_pid, s_error);
+  102   3                      }
+  103   2              }
+  104   1              
+  105   1              
+  106   1              if(lhuandao_flag == 1)
+  107   1              {
+  108   2                      lhuandao_deal();
+  109   2              }
+  110   1              
+  111   1              if(rhuandao_flag == 1)
+  112   1              {
+  113   2                      rhuandao_deal();
+  114   2              }
+  115   1              
+  116   1      //      if(podao_flag == 1)
+  117   1      //      {       
+  118   1      //              goalspeed = speed_slope;
+  119   1      //              if((podao_time >= 370))
+  120   1      //              {
+  121   1      //                      podao_flag = 0;
+  122   1      //                      po_finish++;
+  123   1      //                      control_point++;
+C251 COMPILER V5.60.0,  element                                                            27/03/26  11:12:47  PAGE 3   
+
+  124   1      //              }
+  125   1      //      }
+  126   1              if(zhangai_flag == 1)
+  127   1              {
+  128   2                      zhangai_deal();
+  129   2              }
+  130   1      }
+  131          
+  132          /*********************************************
+  133          *∫Ø ˝£∫’œ∞≠ ∂±∫Ø ˝
+  134          *∫Ø ˝√˚£∫element_judge()
+  135          *±∏◊¢£∫
+  136          *********************************************/
+  137          void zhangai(void)
+  138          {
+  139   1              if(zhangai_state == 0 && dl1a_distance_mm <= 550 && podao_flag!=1 && (zone_flag == 1) && (Dlla_control[c
+             -ontrol_point] == 1))                   //’œ∞≠
+  140   1              {
+  141   2                      zhangai_flag = 1;
+  142   2                      zhangai_state = 1;
+  143   2                      zone_flag = 4;
+  144   2                      zhangai_dis = dis;
+  145   2              }
+  146   1      }
+  147          
+  148          /*********************************************
+  149          *∫Ø ˝£∫ª∑µ∫ ∂±∫Ø ˝
+  150          *∫Ø ˝√˚£∫ª∑µ∫_judge()
+  151          *±∏◊¢£∫
+  152          *********************************************/
+  153          void huandao(void)
+  154          {
+  155   1              if(huandao_state == NONE && ad2>=67 && ad1>= 65 && ad4>=90 && podao_flag==0)
+  156   1              {
+  157   2                      {
+  158   3                              lhuandao_flag = 1;
+  159   3                              huandao_state = PRE_ENROLL;
+  160   3                              huandao_time = 0;
+  161   3                      }
+  162   2              }
+  163   1              
+  164   1              if(huandao_state == NONE && ad2>=67 && ad3>= 65 && ad0>=90 && podao_flag==0)
+  165   1              {
+  166   2                      {
+  167   3                              rhuandao_flag = 1;
+  168   3                              huandao_state = PRE_ENROLL;
+  169   3                              huandao_time = 0;
+  170   3                      }
+  171   2              }
+  172   1      }
+  173          /*********************************************
+  174          *∫Ø ˝£∫Õ‰÷±µ¿ ∂±∫Ø ˝
+  175          *∫Ø ˝√˚£∫zw_judge()
+  176          *±∏◊¢£∫
+  177          *********************************************/
+  178          void zw_judge(void)
+  179          {
+  180   1              if(lhuandao_flag !=1 && zhangai_flag !=1 && rhuandao_flag !=1  && (((error_heng <= 0.23 || error_heng >=
+             - -0.23) && (error_xie <= 0.47 || error_xie >= -0.47)) || ad2 >= (50)/*ad_referens *0.90*/))
+  181   1              {
+  182   2                      zone_flag = 1;          //÷±µ¿
+  183   2              }
+  184   1              if(lhuandao_flag !=1 && zhangai_flag !=1 && rhuandao_flag !=1  && ad2 <= (50)/*ad_referens *0.90*/ && (e
+             -rror_heng > 0.23 || error_heng < -0.23) && (error_xie > 0.47 || error_xie < -0.47))
+  185   1      
+  186   1              {
+C251 COMPILER V5.60.0,  element                                                            27/03/26  11:12:47  PAGE 4   
+
+  187   2                      zone_flag = 2;          //Õ‰µ¿
+  188   2              }
+  189   1      }
+  190          
+  191          /*********************************************
+  192          *∫Ø ˝£∫÷¥––∫Ø ˝
+  193          *∫Ø ˝√˚£∫PROCESS()
+  194          *±∏◊¢£∫
+  195          *********************************************/
+  196          void PROCESS(void)
+  197          {
+  198   1              error_heng = (ad4 - ad0) / (ad4 + ad0);
+  199   1              error_xie =  (ad3 - ad1) / (ad3 + ad1);
+  200   1              zw_judge();
+  201   1      //      huandao();
+  202   1      //      Po();
+  203   1      //      zhangai();
+  204   1              servo_control();
+  205   1      }
+  206          
+  207          /*********************************************
+  208           *∫Ø ˝£∫∆¬µ¿ ∂±∫Ø ˝
+  209           *∫Ø ˝√˚£∫
+  210           *±∏◊¢£∫
+  211           *********************************************/
+  212          void Po(void)
+  213          {
+  214   1              if(podao_flag==0  && lhuandao_flag == 0 && rhuandao_flag == 0 && dl1a_distance_mm <= 350 && (Dlla_contro
+             -l[control_point] == -1))
+  215   1              {
+  216   2                              podao_flag = 1;
+  217   2                              podao_time = 0;
+  218   2        }
+  219   1          
+  220   1      }
+  221          
+  222          /*********************************************
+  223          *∫Ø ˝£∫±‹’œ÷¥––∫Ø ˝
+  224          *∫Ø ˝√˚£∫zhangai_deal()
+  225          *±∏◊¢£∫
+  226          *********************************************/
+  227          void zhangai_deal(void)
+  228          {
+  229   1              if(zhangai_state == 1)
+  230   1              {
+  231   2                      goalspeed = speed_strait;
+  232   2                      change_duty = 80;
+  233   2                      if(dis - zhangai_dis > 0.47)
+  234   2                      {
+  235   3                              zhangai_state = 2;
+  236   3                      }
+  237   2              }
+  238   1              if(zhangai_state == 2)
+  239   1              {
+  240   2                      goalspeed = speed_ben;
+  241   2                      change_duty = 0;
+  242   2                      if((dis - zhangai_dis) > 0.56)//0.78
+  243   2                      {
+  244   3                              change_duty = -80;
+  245   3                              if((dis - zhangai_dis) > 1.14)
+  246   3                              {
+  247   4                                      change_duty = 0;
+  248   4                                      if(ad2>=0.7)
+  249   4                                      {
+  250   5                                              zhangai_flag = 0;
+  251   5                                              zhangai_state = 0;
+C251 COMPILER V5.60.0,  element                                                            27/03/26  11:12:47  PAGE 5   
+
+  252   5                                              zhangai_finish++;
+  253   5                                              control_point++;
+  254   5                                              zone_flag = 2;
+  255   5                                      }
+  256   4                              }               
+  257   3                      }
+  258   2              }
+  259   1      }
+  260          
+  261          /*********************************************
+  262          *∫Ø ˝£∫◊Ûª∑µ∫¥¶¿Ì
+  263          *∫Ø ˝√˚£∫lhuandao_deal()
+  264          *±∏◊¢£∫
+  265          *********************************************/
+  266          void lhuandao_deal(void)
+  267          {
+  268   1              if(huandao_state == PRE_ENROLL)
+  269   1              {
+  270   2                      goalspeed = speed_strait * 0.75;                //‘§»Îª∑ºıÀŸ
+  271   2              }
+  272   1              if(huandao_state == PRE_ENROLL && (ad2 >=70 && ad2<= 90) && ad3>=85 && ad3>=ad1)//ad2<88
+  273   1              {
+  274   2                      zone_flag = 3;
+  275   2                      huandao_state = ENROLL;
+  276   2                      angle_z = Yaw;          
+  277   2              }
+  278   1              if(huandao_state == ENROLL)
+  279   1              {
+  280   2                      change_duty = 73;                       //»Îª∑◊¥Ã¨£¨øÿ÷∆∂Êª˙πÃ∂®¥ÚΩ«
+  281   2                      
+  282   2                      if((Yaw - angle_z) >= 40 || ad2 <= ad_referens*0.67)//»ÁΩ«∂»¿€º∆¥Û”⁄„–÷µ‘ÚΩ¯»Îª∑ƒ⁄◊¥Ã¨ªÚ «÷–º‰µÁ∏–µÕ”⁄„
+             -–÷µ
+  283   2                      {
+  284   3                              huandao_state = INSIDER;
+  285   3                      }
+  286   2              }
+  287   1              if(huandao_state == INSIDER)
+  288   1              {
+  289   2                      goalspeed = huan_speed;
+  290   2                      smotor_pid.kp = huan_kp; smotor_pid.kd = huan_kd;//2.0
+  291   2                      s_error = ratio;
+  292   2                      change_duty = pid_solve(&smotor_pid, s_error);
+  293   2                      if((Yaw-angle_z) >= 265 || ad2 >= ad_referens*0.55)                     //»ÁΩ«∂»¿€º∆¥Û”⁄„–÷µ‘ÚΩ¯»Îª∑ƒ⁄◊¥Ã¨ªÚ «÷–º‰µÁ∏–∏ﬂ”
+             -⁄„–÷µ
+  294   2                      {
+  295   3                              huandao_state = PRE_OUT;
+  296   3                      }
+  297   2              }
+  298   1              if(huandao_state == PRE_OUT)
+  299   1              {
+  300   2                      change_duty = 62;                       //‘§≥ˆª∑◊¥Ã¨£¨øÿ÷∆∂Êª˙πÃ∂®¥ÚΩ«          
+  301   2                      if((Yaw-angle_z) >= 320 || ad2 >= ad_referens*0.93)                     //ª˘±æ≥ˆª∑
+  302   2                      {
+  303   3                              huandao_state = OUT;
+  304   3                      }
+  305   2              }
+  306   1              if(huandao_state == OUT)
+  307   1              {
+  308   2                      goalspeed = speed_ben;
+  309   2                      last_error = s_error;
+  310   2                      s_error = (float)(b * (sqrt(ad4) - sqrt(ad0))) / (ad4 + ad0);
+  311   2                      smotor_pid.kp = 5.5; smotor_pid.kd = 4.5;
+  312   2                      change_duty = pid_solve(&smotor_pid, s_error);
+  313   2                      if(huandao_time >= 150)                                                                                                                                 //∂® ±œ˚ª∑£¨ÕÀ≥ˆª∑µ∫◊¥Ã¨
+  314   2                      {
+  315   3                              angle_z = 0;                                            //º«¬ºΩ«÷¡0
+C251 COMPILER V5.60.0,  element                                                            27/03/26  11:12:47  PAGE 6   
+
+  316   3                              huandao_state = NONE;
+  317   3                              huandao_num++;
+  318   3                              lhuandao_flag = 0;
+  319   3                      }
+  320   2              }               
+  321   1      }
+  322          
+  323          
+  324          /*********************************************
+  325          *∫Ø ˝£∫”“ª∑µ∫¥¶¿Ì
+  326          *∫Ø ˝√˚£∫lhuandao_deal()
+  327          *±∏◊¢£∫
+  328          *********************************************/
+  329          void rhuandao_deal(void)
+  330          {
+  331   1              if(huandao_state == PRE_ENROLL)
+  332   1              {
+  333   2                      goalspeed = speed_strait * 0.75;                        //‘§»Îª∑ºıÀŸ
+  334   2              }
+  335   1              if(huandao_state == PRE_ENROLL && (ad2 >=70 && ad2<= 87) && ad1>=85 && ad1>=ad3)//ad2<87
+  336   1              {
+  337   2                      zone_flag = 5;
+  338   2                      huandao_state = ENROLL;
+  339   2                      angle_z = Yaw;
+  340   2              }
+  341   1              if(huandao_state == ENROLL)
+  342   1              {
+  343   2                      change_duty = -72;                      //»Îª∑◊¥Ã¨£¨øÿ÷∆∂Êª˙πÃ∂®¥ÚΩ«
+  344   2      
+  345   2                      if((Yaw - angle_z) <= -40)                      //»ÁΩ«∂»¿€º∆¥Û”⁄„–÷µ‘ÚΩ¯»Îª∑ƒ⁄◊¥Ã¨
+  346   2                      {
+  347   3                              huandao_state = INSIDER;
+  348   3                      }
+  349   2              }
+  350   1              
+  351   1              if(huandao_state == INSIDER)
+  352   1              {
+  353   2                      goalspeed = huan_speed;
+  354   2                      smotor_pid.kp = huan_kp; smotor_pid.kd = huan_kd;
+  355   2                      s_error = -1 * ratio;
+  356   2                      change_duty = pid_solve(&smotor_pid, s_error);
+  357   2                      if((Yaw-angle_z) <= -270)                       //Ω«∂»¿€º∆¥Û”⁄„–÷µΩ¯»Î‘§≥ˆª∑
+  358   2                      {
+  359   3                              huandao_state = PRE_OUT;
+  360   3                      }
+  361   2              }
+  362   1              if(huandao_state == PRE_OUT)
+  363   1              {
+  364   2                      change_duty = -64;                      //‘§≥ˆª∑◊¥Ã¨£¨øÿ÷∆∂Êª˙πÃ∂®¥ÚΩ«          
+  365   2                      if((Yaw-angle_z) <= -320)                       //ª˘±æ≥ˆª∑
+  366   2                      {
+  367   3                              huandao_state = OUT;
+  368   3                      }
+  369   2              }
+  370   1              if(huandao_state == OUT)
+  371   1              {
+  372   2                      goalspeed = speed_ben;
+  373   2                      last_error = s_error;
+  374   2                      s_error = (float)(b * (sqrt(ad4) - sqrt(ad0))) / (ad4 + ad0);
+  375   2                      smotor_pid.kp = 5.0; smotor_pid.kd = 4.5;
+  376   2                      change_duty = pid_solve(&smotor_pid, s_error);
+  377   2                      if(huandao_time >= 150)                                 //∂® ±œ˚ª∑£¨ÕÀ≥ˆª∑µ∫◊¥Ã¨
+  378   2                      {
+  379   3                              angle_z = 0;                                            //º«¬ºΩ«÷¡0
+  380   3                              huandao_state = NONE;
+  381   3                              huandao_num++;
+C251 COMPILER V5.60.0,  element                                                            27/03/26  11:12:47  PAGE 7   
+
+  382   3                              rhuandao_flag = 0;
+  383   3                      }
+  384   2      
+  385   2              }       
+  386   1      }
+  387          /*********************************************
+  388          *∫Ø ˝£∫≥ˆ»Îø‚∫Ø ˝
+  389          *∫Ø ˝√˚£∫out_storage()
+  390          *±∏◊¢£∫
+  391          *********************************************/
+  392          void out_storage(void)
+  393          {
+  394   1              if(out_flag == 0)
+  395   1              {       
+  396   2                      goalspeed = 100;
+  397   2                      last_error = s_error;
+  398   2                      s_error = (float)(b * (sqrt(ad4) - sqrt(ad0))) / (ad4 + ad0);
+  399   2                      smotor_pid.kp = chu_kp; smotor_pid.kd = chu_kd;
+  400   2                      change_duty = pid_solve(&smotor_pid, s_error);
+  401   2                      if(change_duty >= 80)
+  402   2                      {
+  403   3                              change_duty = 80;
+  404   3                      }       
+  405   2                      if(change_duty <= -80)
+  406   2                      {
+  407   3                              change_duty = -80;
+  408   3                      }
+  409   2                      Duty_result = (float)(change_duty + SERVO_MID);
+  410   2                      if(Duty_result >= 900)
+  411   2                              Duty_result = 900;
+  412   2                      if(Duty_result <= 740)
+  413   2                              Duty_result = 740;
+  414   2                      pwm_duty(SMOTOR_PIN, Duty_result);
+  415   2                      if(dis > 0.7)                                           //æ‡¿Î¥Û”⁄„–÷µ£¨Ω· ¯≥ˆø‚◊¥Ã¨
+  416   2                      {
+  417   3                              out_flag = 1;
+  418   3                      }
+  419   2              }
+  420   1      }
+  421          
+  422          void In_ku(void)
+  423          {
+  424   1      
+  425   1          if (out_flag == 2 && in_flag == 0)                                          //ºÃ–¯—≠º£«∞Ω¯
+  426   1          {
+  427   2              ruku_dis = dis;
+  428   2              in_flag = 1;
+  429   2                                      goalspeed = 0 ;
+  430   2                                      last_error = s_error;
+  431   2                                      s_error = (float)(b * (sqrt(ad4) - sqrt(ad0))) / (ad4 + ad0);
+  432   2                                      smotor_pid.kp = 1.8; smotor_pid.kd = 3.5;
+  433   2                                      change_duty = pid_solve(&smotor_pid, s_error);
+  434   2                                      if(change_duty >= 80)
+  435   2                                      {
+  436   3                                              change_duty = 80;
+  437   3                                      }       
+  438   2                                      if(change_duty <= -80)
+  439   2                                      {
+  440   3                                              change_duty = -80;
+  441   3                                      }
+  442   2                                      Duty_result = (float)(change_duty + SERVO_MID);
+  443   2                                      if(Duty_result >= 900)
+  444   2                                              Duty_result = 900;
+  445   2                                      if(Duty_result <= 740)
+  446   2                                              Duty_result = 740;              
+  447   2                                      pwm_duty(SMOTOR_PIN, SERVO_MID);
+C251 COMPILER V5.60.0,  element                                                            27/03/26  11:12:47  PAGE 8   
+
+  448   2          }
+  449   1                      
+  450   1          if (in_flag == 1)                                                                                                           //«∞Ω¯“ª∂®æ‡¿Î∫Ûø™ ºµπ≥µ
+  451   1          {
+  452   2              if (dis - ruku_dis > 0.25)
+  453   2              {
+  454   3                                                      goalspeed = -130;
+  455   3                  ruku_dis = dis;
+  456   3                  in_flag = 2;
+  457   3              }
+  458   2          }
+  459   1                      
+  460   1          if (in_flag == 2)                                                                                                           //º∆ ±µπ≥µ
+  461   1          {
+  462   2                                      last_error = s_error;
+  463   2                                      s_error = (float)(b * (sqrt(ad4) - sqrt(ad0))) / (ad4 + ad0);
+  464   2                                      smotor_pid.kp = 1.8; smotor_pid.kd = 3.5;
+  465   2                                      change_duty = pid_solve(&smotor_pid, s_error);
+  466   2                                      Duty_result = (float)(change_duty + SERVO_MID);
+  467   2                                      pwm_duty(SMOTOR_PIN, Duty_result);
+  468   2              if (cnt > ruku_time)
+  469   2              {
+  470   3                  cnt = 0;
+  471   3                  in_flag = 3;
+  472   3              }
+  473   2          }
+  474   1                      
+  475   1          if (in_flag == 3)                                                                                                           //¥ÚΩ«Ω¯ø‚
+  476   1          {           
+  477   2                                      if(sw_state1 == 1 && sw_state2 == 1)                            //”√≤¶¬Îø™πÿµ˜’˚»Îø‚∑ΩœÚ
+  478   2                                      {
+  479   3                                              change_duty = (-80);                    
+  480   3                                      }
+  481   2                                      else if(sw_state1 == 0 && sw_state2 == 1)
+  482   2                                      {
+  483   3                                              change_duty = (80);             
+  484   3                                      }
+  485   2                                      Duty_result = (float)(change_duty + SERVO_MID);
+  486   2                                      pwm_duty(SMOTOR_PIN, Duty_result);
+  487   2                                      goalspeed = -140;
+  488   2              angle_z = Yaw;
+  489   2                                      ruku_dis = dis;
+  490   2              in_flag = 4;
+  491   2          }
+  492   1                      
+  493   1          if ((abs(Yaw - angle_z) >= 65 || dis - ruku_dis <= -0.55) && in_flag == 4)          //÷±––
+  494   1      //      if (dis - ruku_dis <=-0.73 && in_flag == 4)             //÷±––
+  495   1      
+  496   1          {
+  497   2                      Duty_result = SERVO_MID;
+  498   2                      pwm_duty(SMOTOR_PIN, Duty_result);
+  499   2                      ruku_dis = dis;
+  500   2              in_flag = 5;
+  501   2          }
+  502   1          if (in_flag == 5)           //Õ£≥µ
+  503   1          {
+  504   2                      goalspeed = -130;
+  505   2                      if((dis - ruku_dis) < -0.26)
+  506   2                      {
+  507   3                              goalspeed = 35;
+  508   3                              delay_ms(100);
+  509   3                              in_flag = 6;
+  510   3                      }
+  511   2          }
+  512   1              if(in_flag==6)
+  513   1              {
+C251 COMPILER V5.60.0,  element                                                            27/03/26  11:12:47  PAGE 9   
+
+  514   2                      goalspeed = 0;
+  515   2                      motor_l.exp_speed = 0;
+  516   2                      motor_r.exp_speed = 0;
+  517   2              }
+  518   1      }
+  519          
+  520          
+  521          ///*********************************************
+  522          //*∫Ø ˝£∫ªÙ∂˚ºÏ≤‚
+  523          //*∫Ø ˝√˚£∫huoer()
+  524          //*±∏◊¢£∫
+  525          //*********************************************/
+  526          void huoer(void)
+  527          {
+  528   1              if (HALL_PIN == 0 && number < 24 && out_flag == 1)
+  529   1              {                                                                                                
+  530   2                      number += 1;
+  531   2                      if (number >= 24)
+  532   2                      {
+  533   3                              number = 0;
+  534   3                      }
+  535   2              }
+  536   1              if(rank == 0)
+  537   1              {
+  538   2                      if (number == 1)
+  539   2                      {
+  540   3                              out_flag = 2;
+  541   3                      }
+  542   2              }
+  543   1              if(rank == 1)
+  544   1              {
+  545   2                      if(number == 1)
+  546   2                      {
+  547   3                              control_point = 0;
+  548   3                      }
+  549   2                      if(number == 2)
+  550   2                      {
+  551   3                              out_flag = 2;
+  552   3                      }
+  553   2              }
+  554   1      }
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =      3774     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =       115     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =       222     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,219 @@
+C251 COMPILER V5.60.0,  motor                                                              27/03/26  11:12:45  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE motor
+OBJECT MODULE PLACED IN .\Out_File\motor.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE motor.c XSMALL INTR2 UNSIGNED_CHAR FLOAT64 OPTIMIZE(5,SPEED) BROWSE OR
+                    -DER INCDIR(..\..\Libraries\libraries;..\..\Libraries\seekfree_libraries;..\..\Libraries\seekfree_peripheral;..\CODE;..\U
+                    -SER\inc;..\USER\src) DEBUG PRINT(.\Out_File\motor.lst) OBJECT(.\Out_File\motor.obj) 
+
+stmt  level    source
+
+    1          #include "motor.h"
+    2          motor_param_t motor_l, motor_r;
+    3          pid_param_t motor_pid_l, motor_pid_r;
+    4          
+    5          float L_error, R_error;
+    6          float diff = 0.16;
+    7          int16 goalspeed;
+    8          int16 speed_strait = 80;//135
+    9          int16 speed_ben = 70;//120
+   10          int16 huan_speed = 145;//145
+   11          int16 zhangai_speed = 0;
+   12          int16 podao_speed = 55;
+   13          
+   14          void motor_pid_init(void)
+   15          {
+   16   1              PID_CREATE(&motor_pid_l, 63, 36, 120, 1, MOTOR_PWM_DUTY_MAX, 500, MOTOR_PWM_DUTY_MAX);
+   17   1              PID_CREATE(&motor_pid_r, 63, 36, 120, 1, MOTOR_PWM_DUTY_MAX, 500, MOTOR_PWM_DUTY_MAX);
+   18   1      //      PID_CREATE(&motor_pid_l, 0, 120, 0, 1, MOTOR_PWM_DUTY_MAX, MOTOR_PWM_DUTY_MAX, MOTOR_PWM_DUTY_MAX);
+   19   1      //      PID_CREATE(&motor_pid_r, 0, 120, 0, 1, MOTOR_PWM_DUTY_MAX, MOTOR_PWM_DUTY_MAX, MOTOR_PWM_DUTY_MAX);
+   20   1      }
+   21          
+   22          void dif_motor_control(void)
+   23          {
+   24   1              motor_l.exp_speed = goalspeed;
+   25   1              motor_r.exp_speed = goalspeed;
+   26   1              
+   27   1              if((zone_flag == 1) && in_flag == 0 && (zhangai_state != 1))
+   28   1              {
+   29   2                      if (change_duty > 0)
+   30   2                      {
+   31   3                              motor_l.exp_speed = motor_l.exp_speed * (float)(change_duty * (-0.005f) + 0.80f); // && space_flag!=1
+   32   3                              motor_r.exp_speed = (goalspeed + change_duty * 0.1);
+   33   3                      }
+   34   2                      if (change_duty < 0) 
+   35   2                      {
+   36   3                              motor_r.exp_speed = motor_r.exp_speed * (float)(change_duty * (0.005f) + 0.80f); 
+   37   3                              motor_l.exp_speed = (goalspeed + (-1 * change_duty * 0.1));
+   38   3      
+   39   3                      }
+   40   2              }
+   41   1              if((zone_flag != 1) && (in_flag==0) && (zhangai_state != 1))
+   42   1              {
+   43   2                      if (change_duty > 0)
+   44   2                      {
+   45   3                              motor_l.exp_speed = motor_l.exp_speed * (float)(change_duty * (-0.006f) + 0.80f); // && space_flag!=1
+   46   3                              motor_r.exp_speed = (goalspeed + change_duty * diff);
+   47   3                      }
+   48   2                      if (change_duty < 0) 
+   49   2                      {
+   50   3                              motor_r.exp_speed = motor_r.exp_speed * (float)(change_duty * (0.006f) + 0.80f); 
+   51   3                              motor_l.exp_speed = (goalspeed + (-1 * change_duty * diff));
+   52   3      
+   53   3                      }
+   54   2              }
+   55   1              if(zhangai_state==1)
+   56   1              {
+   57   2                      if (change_duty > 0)
+C251 COMPILER V5.60.0,  motor                                                              27/03/26  11:12:45  PAGE 2   
+
+   58   2                      {
+   59   3                              motor_l.exp_speed = motor_l.exp_speed * (float)(change_duty * (-0.008f) + 0.75f); // && space_flag!=1
+   60   3                              motor_r.exp_speed = goalspeed + change_duty * 0.20;
+   61   3                      }
+   62   2                      if (change_duty < 0) 
+   63   2                      {
+   64   3                              motor_r.exp_speed = motor_r.exp_speed * (float)(change_duty * (0.008f) + 0.75f); 
+   65   3                              motor_l.exp_speed = goalspeed + change_duty * (-0.20);
+   66   3      
+   67   3                      }
+   68   2              }
+   69   1              
+   70   1              if (change_duty > 0 && (in_flag == 4 || in_flag == 3) && in_flag != 5)
+   71   1              {
+   72   2                      motor_l.exp_speed = motor_l.exp_speed * (float)(change_duty * (-0.0075f) + 0.8f);//0.0072
+   73   2              motor_r.exp_speed = goalspeed;
+   74   2              }
+   75   1              if (change_duty < 0 && (in_flag == 4 || in_flag == 3) && in_flag != 5)
+   76   1              {
+   77   2                      motor_r.exp_speed = motor_r.exp_speed * (float)(change_duty * (0.0075f) + 0.8f);//0.0072
+   78   2              motor_l.exp_speed = goalspeed;
+   79   2              }
+   80   1              
+   81   1      }
+   82          
+   83          void motor_init(void)
+   84          {
+   85   1              pwm_init(PWMA_CH1P_P60, 17000, 0);
+   86   1              pwm_init(PWMA_CH2P_P62, 17000, 0);
+   87   1              pwm_init(PWMA_CH3P_P64, 17000, 0);
+   88   1              pwm_init(PWMA_CH4P_P66, 17000, 0);
+   89   1      }
+   90          
+   91          void motor_control(void)
+   92          {
+   93   1              
+   94   1              if (ad0 <= 5 &&  ad1 <= 5 && ad3 <= 5 && ad2 <= 5 && ad4 <= 5 && in_flag == 0 && zhangai_flag == 0)
+   95   1              {
+   96   2                      lost_flag = 1;
+   97   2              }
+   98   1              else
+   99   1              {
+  100   2                      lost_flag = 0;
+  101   2              }
+  102   1      
+  103   1              if (lost_flag == 0)
+  104   1              {
+  105   2                      dif_motor_control();
+  106   2      //              motor_l.target_speed = motor_l.exp_speed;
+  107   2      //              motor_r.target_speed = motor_r.exp_speed;
+  108   2              }
+  109   1      
+  110   1              if (lost_flag == 1) 
+  111   1              {
+  112   2                      goalspeed = 0;
+  113   2                      motor_l.exp_speed = 0;
+  114   2                      motor_r.exp_speed = 0;
+  115   2              }
+  116   1              
+  117   1      //      if(motor_l.exp_speed > motor_l.encoder_speed)
+  118   1      //      {
+  119   1      //              motor_l.target_speed+=5;
+  120   1      //              if(motor_l.exp_speed - motor_l.encoder_speed < 5)
+  121   1      //              {
+  122   1      //                      motor_l.target_speed = motor_l.exp_speed;
+  123   1      //              }
+C251 COMPILER V5.60.0,  motor                                                              27/03/26  11:12:45  PAGE 3   
+
+  124   1      //      }
+  125   1      //      if(motor_r.exp_speed > motor_r.encoder_speed)
+  126   1      //      {
+  127   1      //              motor_r.target_speed+=5;
+  128   1      //              if(motor_r.exp_speed - motor_r.encoder_speed < 5)
+  129   1      //              {
+  130   1      //                      motor_r.target_speed = motor_r.exp_speed;
+  131   1      //              }
+  132   1      //      }
+  133   1      //      if(motor_l.exp_speed < motor_l.encoder_speed)
+  134   1      //      {
+  135   1      //              motor_l.target_speed-=5;
+  136   1      //              if(motor_l.encoder_speed - motor_l.exp_speed < 5)
+  137   1      //              {
+  138   1      //                      motor_l.target_speed = motor_l.exp_speed;
+  139   1      //              }
+  140   1      //      }
+  141   1      //      if(motor_r.exp_speed < motor_r.encoder_speed)
+  142   1      //      {
+  143   1      //              motor_r.target_speed-=5;
+  144   1      //              if(motor_r.encoder_speed - motor_r.exp_speed < 5)
+  145   1      //              {
+  146   1      //                      motor_r.target_speed = motor_r.exp_speed;
+  147   1      //              }
+  148   1      //      }
+  149   1              L_error = (motor_l.exp_speed - motor_l.encoder_speed);
+  150   1              R_error = (motor_r.exp_speed - motor_r.encoder_speed);
+  151   1              
+  152   1              motor_l.duty = pid_solve(&motor_pid_l, L_error);
+  153   1              motor_r.duty = pid_solve(&motor_pid_r, R_error);
+  154   1      //      motor_l.duty = increment_pid_solve(&motor_pid_l, L_error);
+  155   1      //      motor_r.duty = increment_pid_solve(&motor_pid_r, R_error);
+  156   1      
+  157   1              //电机pwm限幅
+  158   1              if(motor_l.duty>6000)motor_l.duty = 6000;
+  159   1              if(motor_l.duty < -6000) motor_l.duty = -6000;
+  160   1              if(motor_r.duty>6000)motor_r.duty = 6000;
+  161   1              if(motor_r.duty < -6000) motor_r.duty = -6000;
+  162   1              
+  163   1              //控制左边电机正反转
+  164   1              if(start_flag == 1)
+  165   1              {
+  166   2                      pwm_duty(PWMA_CH1P_P60, (motor_l.duty >= 0) ? motor_l.duty : 0);
+  167   2                      pwm_duty(PWMA_CH2P_P62, (motor_l.duty >= 0) ? 0 : (-motor_l.duty));
+  168   2                      //控制右边电机正反转
+  169   2                      pwm_duty(PWMA_CH3P_P64, (motor_r.duty >= 0) ? motor_r.duty : 0);
+  170   2                      pwm_duty(PWMA_CH4P_P66, (motor_r.duty >= 0) ? 0 : (-motor_r.duty));
+  171   2              }
+  172   1      }
+  173          
+  174          
+  175          
+  176                  
+  177          
+  178          
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =      1449     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =       136     ------
+C251 COMPILER V5.60.0,  motor                                                              27/03/26  11:12:45  PAGE 4   
+
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =        38     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
